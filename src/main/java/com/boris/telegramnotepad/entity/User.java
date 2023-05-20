@@ -28,5 +28,5 @@ public class User {
     @Column(name = "registered_at")
     private LocalDateTime registeredAt;
     @OneToMany(mappedBy = "user")
-    private List<Message> messages;
+    private List<Reminder> reminders;
 }

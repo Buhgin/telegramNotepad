@@ -13,16 +13,16 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity(name = "messages")
-public class Message {
+public class Reminder {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    private Long chatId;
+    private Long id;
 
     @Column(name = "text")
     private String text;
     @Column(name = "reply_date")
     private LocalDateTime replyDate;
-
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
