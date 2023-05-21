@@ -11,7 +11,7 @@ import java.util.List;
 @Repository
 public interface MessageRepository extends JpaRepository<Reminder, Long> {
 
-    List<Reminder> findByIdOrderByReplyDateAsc(long chatId);
+    List<Reminder> findByUserChatId(long chatId);
 
     List<Reminder> findAllByUserAndReplyDateBetween(User user,
                                                     LocalDateTime end,

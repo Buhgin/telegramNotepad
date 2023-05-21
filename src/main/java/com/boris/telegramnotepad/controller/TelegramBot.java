@@ -1,20 +1,18 @@
 package com.boris.telegramnotepad.controller;
 
 import com.boris.telegramnotepad.config.BotConfig;
-import com.boris.telegramnotepad.service.CalendarService;
+import com.boris.telegramnotepad.repository.MessageRepository;
 import com.boris.telegramnotepad.util.CalendarForm;
 import com.boris.telegramnotepad.service.TelegramService;
 import com.boris.telegramnotepad.util.Parse;
-import com.boris.telegramnotepad.util.payload.CalendarModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDate;
@@ -24,12 +22,11 @@ import java.time.LocalDateTime;
 @Slf4j
 @RequiredArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
+    private final MessageRepository messageRepository;
 
     private static String selectedTime;
     private static String text;
     private final CalendarForm calendarForm;
-    private final CalendarService calendarService;
-
     private final TelegramService telegramService;
     private final BotConfig config;
 
@@ -49,26 +46,35 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             chatId = update.getMessage().getChatId();
-            if ("/save".equals(messageText)) {
-                SendMessage message = calendarForm.monthCalendar();
+            if ("/start".equals(messageText)) {
+                SendMessage message = telegramService.startCommandReceived(update);
                 message.setChatId(String.valueOf(chatId));
                 sendMessage(message);
-            }else if (messageText instanceof String) {
-                    if (Parse.isNumeric(messageText)) {
+                return;
+            }
+            if ("/all".equals(messageText)) {
+                SendMessage message = telegramService.allCommandReceived(update);
+                message.setChatId(String.valueOf(chatId));
+                sendMessage(message);
+                return;
+            }
+                if (Parse.isNumeric(messageText)) {
                     LocalDateTime localDateTime = Parse.parseTimeToInt(selectedTime, messageText);
                     SendMessage message = new SendMessage();
                     message.setChatId(String.valueOf(chatId));
                     message.setText("You have selected time: " + localDateTime);
                     sendMessage(message);
-                    telegramService.createMessageFull(chatId, text, localDateTime,update);
-                    return;
+                     SendMessage saveReminder =  telegramService.createMessageFull(chatId, text, localDateTime, update);
+                      saveReminder.setChatId(String.valueOf(chatId));
+                      sendMessage(saveReminder);
+                     return;
                 }
-                text = messageText;
-                SendMessage message = calendarForm.monthCalendar();
-                message.setChatId(String.valueOf(chatId));
-                sendMessage(message);
-            }
-
+                else {
+                    text = messageText;
+                    SendMessage message = calendarForm.monthCalendar();
+                    message.setChatId(String.valueOf(chatId));
+                    sendMessage(message);
+                }
         }
 
         if (update.hasCallbackQuery()) {
@@ -86,7 +92,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 SendMessage message = calendarForm.sendTime(localDate);
                 message.setChatId(String.valueOf(callbackQuery.getMessage().getChatId()));
                 sendMessage(message);
-                selectedTime= day;
+                selectedTime = day;
             }
         }
     }
@@ -98,5 +104,22 @@ public class TelegramBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
-
+    @Scheduled(cron = "10 *  * * * * ")
+    private void sendReminder() {
+        try {
+            if(telegramService.getActualReminder() != null){
+                SendMessage message = telegramService.getActualReminder();
+            execute(message);
+            }
+            else {
+                log.info("No reminders");
+            }
+        }catch (TelegramApiException e){
+            e.printStackTrace();
+        }
+    }
+    //TODO исправить сохранине тегов в бд
+    //TODO создать поток для отправки сообщений
+    //TODO добавить логирование
+    //TODO добавить горячие команды
 }

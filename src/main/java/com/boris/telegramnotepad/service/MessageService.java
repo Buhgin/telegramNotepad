@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -25,7 +26,7 @@ public class MessageService {
 
     }
     public List<Reminder> getAllMessagesByUserId(long userId) {
-        return messageRepository.findByIdOrderByReplyDateAsc(userId);
+        return messageRepository.findByUserChatId(userId);
     }
    public List<Reminder> getAllMessagesByReplyDate(long userId, LocalDate replyDate ) {
         LocalTime startOfDay = LocalTime.MIN;
@@ -36,25 +37,23 @@ public class MessageService {
                 -> new ResourceNotFoundException("User", "chatId", userId));
         return messageRepository.findAllByUserAndReplyDateBetween(user, start, end);
     }
-    public void deleteMessage(Reminder reminder) {
-        messageRepository.delete(reminder);
+    public void deleteMessage(long id) {
+
+        messageRepository.deleteById(id);
     }
-   /* private void actualMessage() {
-        while (true) {
-            List<Message> list = messageRepository.findAll();
+   public Reminder actualMessage() {
+            List<Reminder> list = messageRepository.findAll();
            LocalDateTime.now();
-            if (list.size() == 0) {
-                return;
-            }
-            for (Message message : list) {
-                if (message.getReplyDate().isEqual(LocalDateTime.now())) {
-                    String messageText = message.getText();
-                    long chatId = message.getChatId();
-                    sendMessage(messageText, chatId);
+            for (Reminder reminder : list) {
+                if (reminder.getReplyDate().truncatedTo(ChronoUnit.MINUTES).
+                        isEqual(LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES))) {
+
+                    return reminder;
                 }
             }
-        } //TODO: 1. Добавить таймер, который будет проверять время отправки сообщения
-             //TODO: решить откуда будет работать данный метод
-    }*/
+        return null;}
+    //TODO: list of reminders
+    }
 
-}
+
+

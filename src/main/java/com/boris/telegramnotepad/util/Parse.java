@@ -21,7 +21,7 @@ public class Parse {
         int hour = Integer.parseInt(partsTime[0]);
         int minute = Integer.parseInt(partsTime[1]);
 
-        return LocalDateTime.of(year, month, day, hour, minute);
+        return LocalDateTime.of(year, month+1, day, hour, minute);
     }
     public static boolean isNumeric(String strNum) {
         String[] partsTime = strNum.split("-");

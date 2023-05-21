@@ -2,19 +2,15 @@ package com.boris.telegramnotepad.service;
 
 import com.boris.telegramnotepad.entity.Reminder;
 import com.boris.telegramnotepad.entity.User;
-import com.boris.telegramnotepad.exeption.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
-import org.telegram.telegrambots.meta.api.objects.Chat;
-import org.telegram.telegrambots.meta.api.objects.Update;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.Message;
-
-import java.text.ParseException;
+import org.telegram.telegrambots.meta.api.objects.Update;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 
 @Service
@@ -26,16 +22,33 @@ public class TelegramService {
     public SendMessage startCommandReceived(Update update) {
         String firstName = update.getMessage().getFrom().getFirstName();
         long chatId = update.getMessage().getChatId();
-        String text = String.format("Hello, %s! This is a bot for saving your notes. " +
-                "To save a note, send it to me. " +
-                "To view all notes, send /all. " +
-                "To view notes by date, send /date. To view notes by tag, send /tag.", firstName);
+        String text = String.format("Здравствуйте, %s! Это бот для сохранения ваших заметок." +
+                "Чтобы сохранить заметку, пришлите ее мне." +
+                "Чтобы просмотреть все заметки, отправьте /all." +
+                "Для просмотра заметок по дате отправьте /date. Чтобы просмотреть заметки по тегу, отправьте /tag.", firstName);
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(text);
         registerUser(update.getMessage());
         return message;
     }
+    public SendMessage allCommandReceived(Update update) {
+        SendMessage message = new SendMessage();
+        String firstName = update.getMessage().getFrom().getFirstName();
+        long chatId = update.getMessage().getChatId();
+        if (!userService.getUserByChatIdIsEmpty(chatId)){
+        List<Reminder> reminders = messageService.getAllMessagesByUserId(chatId);
+        StringBuilder text = new StringBuilder();
+        text.append(String.format("Здравствуйте, %s! Ваши заметки: ", firstName));
+        for (Reminder reminder : reminders) {
+            text.append(String.format("\n%s + дата %s", reminder.getText(), reminder.getReplyDate().toString()));
+        }
+        message.setChatId(String.valueOf(chatId));
+        message.setText(text.toString());
+        return message;}
+        message.setChatId(String.valueOf(chatId));
+        message.setText("Вы не зарегистрированы. Для регистрации отправьте /start.");
+    return message;}
 
     public SendMessage createMessageFull(long chatId, String text, LocalDateTime replyDate, Update update) {
         registerUser(update.getMessage());
@@ -52,12 +65,22 @@ public class TelegramService {
    return message;
     }
 
+    public SendMessage getActualReminder() {
+        Reminder reminder = messageService.actualMessage();
+        if (reminder == null) {
+            return null;
+        } else {
+            SendMessage message = new SendMessage();
+            message.setChatId(String.valueOf(reminder.getUser().getChatId()));
+            String text = String.format("Привет %s напоминаю  %s",reminder.getUser().getFirstName(),
+                    reminder.getText());
+            message.setText(text);
 
+            return message;
+        }
+    }
+    public void deleteReminder(Message reminder) {
 
-
-    private LocalDateTime parseDate(String s) throws ParseException {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
-        return LocalDateTime.parse(s, formatter);
     }
 
     private void registerUser(Message msg) {
@@ -73,5 +96,7 @@ public class TelegramService {
             userService.createUser(user);
         }
     }
+
+
 
 }
