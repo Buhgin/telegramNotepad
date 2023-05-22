@@ -13,9 +13,4 @@ public interface MessageRepository extends JpaRepository<Reminder, Long> {
 
     List<Reminder> findByUserChatId(long chatId);
 
-    List<Reminder> findAllByUserAndReplyDateBetween(User user,
-                                                    LocalDateTime end,
-                                                    LocalDateTime start);
-
-
 }

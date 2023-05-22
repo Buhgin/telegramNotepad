@@ -94,11 +94,6 @@ public class TelegramService {
         }
   return null;  }
 
-    public boolean isDateBeforeNow(String localDate) {
-        LocalDate currentDate = LocalDate.now();
-        LocalDate dateToCompare = Parse.parseDate(localDate);
-        return dateToCompare.isBefore(currentDate);
-    }
     public void deleteOldReminder() {
         messageService.deleteOldMessage();
     }

@@ -12,11 +12,13 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,56 +44,52 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        long chatId;
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();
-            chatId = update.getMessage().getChatId();
+            Message message = update.getMessage();
+            String messageText = message.getText();
+            long chatId = message.getChatId();
             if ("/start".equals(messageText)) {
-                SendMessage message = telegramService.startCommandReceived(update);
-                message.setChatId(String.valueOf(chatId));
-                sendMessage(message);
+                SendMessage startMessage = telegramService.startCommandReceived(update);
+                startMessage.setChatId(String.valueOf(chatId));
+                sendMessage(startMessage);
                 return;
             }
+
             if ("/all".equals(messageText)) {
-                SendMessage message = telegramService.allCommandReceived(update);
-                message.setChatId(String.valueOf(chatId));
-                sendMessage(message);
+                SendMessage allMessage = telegramService.allCommandReceived(update);
+                allMessage.setChatId(String.valueOf(chatId));
+                sendMessage(allMessage);
                 return;
             }
-                if (Parse.isNumeric(messageText)) {
-                    String selectedTime = reminderMap.get(chatId).getReplyDatePojo().toString();
-                    LocalDateTime localDateTime = Parse.parseTimeToInt(selectedTime, messageText);
-                    SendMessage message = new SendMessage();
-                    message.setChatId(String.valueOf(chatId));
-                    message.setText("Вы выбрали время :" + localDateTime);
-                    StringBuilder stringBuilder = new StringBuilder();
-                    stringBuilder.append(localDateTime.getYear()).append("-")
-                            .append(localDateTime.getMonthValue()).append("-")
-                            .append(localDateTime.getDayOfMonth()).append(" ")
-                            .append(localDateTime.getHour()).append(":")
-                            .append(localDateTime.getMinute()).append(":")
-                            .append(localDateTime.getSecond());
-                    String text = reminderMap.get(chatId).getTextPojo();
-                    ReminderPojo reminderPojofinal= new ReminderPojo(text, stringBuilder);
-                    reminderMap.put(chatId, reminderPojofinal);
+            if (Parse.isNumeric(messageText)) {
+                String selectedTime = reminderMap.get(chatId).getReplyDatePojo().toString();//reminderMap.get(chatId).getReplyDatePojo() возвращает StringBuilder
+                LocalDateTime localDateTime = Parse.parseTimeToInt(selectedTime, messageText);
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm");
+                String formattedDateTime = localDateTime.format(formatter);
+                SendMessage timeSelectedMessage = new SendMessage();
+                timeSelectedMessage.setChatId(String.valueOf(chatId));
+                timeSelectedMessage.setText("Вы выбрали время :" + formattedDateTime);
+                StringBuilder stringBuilder = new StringBuilder();
+                stringBuilder.append(localDateTime);
+                String text = reminderMap.get(chatId).getTextPojo();
+                ReminderPojo reminderPojofinal = new ReminderPojo(text, stringBuilder);
+                reminderMap.put(chatId, reminderPojofinal);
 
-                    sendMessage(message);
-                     SendMessage saveReminder =  telegramService.createMessageFull(chatId,
-                             reminderMap.get(chatId).getTextPojo(),
-                             localDateTime, update);
-                      saveReminder.setChatId(String.valueOf(chatId));
-                      sendMessage(saveReminder);
-                     return;
-                }
-                else {
-
-                   ReminderPojo reminderPojo = new ReminderPojo();
-                   reminderPojo.setTextPojo(messageText);
-                    reminderMap.put(chatId, reminderPojo);
-                    SendMessage message = calendarForm.monthCalendar();
-                    message.setChatId(String.valueOf(chatId));
-                    sendMessage(message);
-                }
+                sendMessage(timeSelectedMessage);
+                SendMessage saveReminder = telegramService.createMessageFull(chatId,
+                        reminderMap.get(chatId).getTextPojo(),
+                        localDateTime, update);
+                saveReminder.setChatId(String.valueOf(chatId));
+                sendMessage(saveReminder);
+                return;
+            } else {
+                ReminderPojo reminderPojo = reminderMap.getOrDefault(chatId, new ReminderPojo());
+                reminderPojo.setTextPojo(messageText);
+                reminderMap.put(chatId, reminderPojo);
+                SendMessage monthCalendarMessage = calendarForm.monthCalendar();
+                monthCalendarMessage.setChatId(String.valueOf(chatId));
+                sendMessage(monthCalendarMessage);
+            }
         }
 
         if (update.hasCallbackQuery()) {
@@ -126,17 +124,19 @@ public class TelegramBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
+
     @Scheduled(cron = "10 *  * * * * ")
     private void sendReminder() {
         try {
-            if(telegramService.getActualReminder() != null){
+            if (telegramService.getActualReminder() != null) {
                 List<SendMessage> sendMessageList = telegramService.getActualReminder();
-                for (SendMessage sendMessage : sendMessageList){
-                      execute(sendMessage);}
-            telegramService.deleteOldReminder();
+                for (SendMessage sendMessage : sendMessageList) {
+                    execute(sendMessage);
+                }
+                telegramService.deleteOldReminder();
             }
 
-        }catch (TelegramApiException e){
+        } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
