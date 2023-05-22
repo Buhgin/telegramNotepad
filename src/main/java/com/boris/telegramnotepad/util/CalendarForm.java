@@ -76,7 +76,7 @@ public class CalendarForm {
                 int dayOfMonth = i - dayOfWeek + 1;
                 InlineKeyboardButton button = new InlineKeyboardButton();
                 button.setText(Integer.toString(dayOfMonth));
-                button.setCallbackData("CALENDAR_DAY_" + calendar.get(Calendar.YEAR) + "_" + month + "_" + dayOfMonth);
+                button.setCallbackData("CALENDAR_DAY_" + calendar.get(Calendar.YEAR) + "-" + month + "-" + dayOfMonth);
                 row.add(button);
             } else {
                 InlineKeyboardButton button = new InlineKeyboardButton();

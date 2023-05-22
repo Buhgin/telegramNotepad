@@ -4,8 +4,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class Parse {
+    public static LocalDate parseDate(String data){
+        String[] parts = data.split("-");
+        int year = Integer.parseInt(parts[0]);
+        int month = Integer.parseInt(parts[1]);
+        return LocalDate.of(year, month, 1);
+    }
     public static LocalDate parseDateToInt(String data) {
-        String[] parts = data.split("_");
+        String[] parts = data.split("-");
             int year = Integer.parseInt(parts[0]);
             int month = Integer.parseInt(parts[1]);
             int day = Integer.parseInt(parts[2]);
@@ -13,7 +19,7 @@ public class Parse {
         return LocalDate.of(year, month+1, day);
     }
     public static LocalDateTime parseTimeToInt(String data, String time) {
-        String[] parts = data.split("_");
+        String[] parts = data.split("-");
         String[] partsTime = time.split("-");
         int year = Integer.parseInt(parts[0]);
         int month = Integer.parseInt(parts[1]);

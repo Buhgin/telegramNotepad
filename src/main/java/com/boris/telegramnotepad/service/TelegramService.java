@@ -2,13 +2,17 @@ package com.boris.telegramnotepad.service;
 
 import com.boris.telegramnotepad.entity.Reminder;
 import com.boris.telegramnotepad.entity.User;
+import com.boris.telegramnotepad.util.Parse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,8 +46,12 @@ public class TelegramService {
             List<Reminder> reminders = messageService.getAllMessagesByUserId(chatId);
             StringBuilder text = new StringBuilder();
             text.append(String.format("Здравствуйте, %s! Ваши заметки: ", firstName));
+            int i =1;
             for (Reminder reminder : reminders) {
-                text.append(String.format("\n%s + дата %s", reminder.getText(), reminder.getReplyDate().toString()));
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm");
+                String formattedDateTime = reminder.getReplyDate().format(formatter);
+                text.append(String.format("\n\n%d. %s  :  дата  %s", i,reminder.getText(), formattedDateTime));
+                   i++;
             }
             message.setChatId(String.valueOf(chatId));
             message.setText(text.toString());
@@ -86,6 +94,11 @@ public class TelegramService {
         }
   return null;  }
 
+    public boolean isDateBeforeNow(String localDate) {
+        LocalDate currentDate = LocalDate.now();
+        LocalDate dateToCompare = Parse.parseDate(localDate);
+        return dateToCompare.isBefore(currentDate);
+    }
     public void deleteOldReminder() {
         messageService.deleteOldMessage();
     }
