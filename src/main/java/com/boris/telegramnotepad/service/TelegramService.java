@@ -10,6 +10,7 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -24,31 +25,34 @@ public class TelegramService {
         long chatId = update.getMessage().getChatId();
         String text = String.format("Здравствуйте, %s! Это бот для сохранения ваших заметок." +
                 "Чтобы сохранить заметку, пришлите ее мне." +
-                "Чтобы просмотреть все заметки, отправьте /all." +
-                "Для просмотра заметок по дате отправьте /date. Чтобы просмотреть заметки по тегу, отправьте /tag.", firstName);
+                "Чтобы просмотреть все заметки, отправьте /all."
+               , firstName);
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(text);
         registerUser(update.getMessage());
         return message;
     }
+
     public SendMessage allCommandReceived(Update update) {
         SendMessage message = new SendMessage();
         String firstName = update.getMessage().getFrom().getFirstName();
         long chatId = update.getMessage().getChatId();
-        if (!userService.getUserByChatIdIsEmpty(chatId)){
-        List<Reminder> reminders = messageService.getAllMessagesByUserId(chatId);
-        StringBuilder text = new StringBuilder();
-        text.append(String.format("Здравствуйте, %s! Ваши заметки: ", firstName));
-        for (Reminder reminder : reminders) {
-            text.append(String.format("\n%s + дата %s", reminder.getText(), reminder.getReplyDate().toString()));
+        if (!userService.getUserByChatIdIsEmpty(chatId)) {
+            List<Reminder> reminders = messageService.getAllMessagesByUserId(chatId);
+            StringBuilder text = new StringBuilder();
+            text.append(String.format("Здравствуйте, %s! Ваши заметки: ", firstName));
+            for (Reminder reminder : reminders) {
+                text.append(String.format("\n%s + дата %s", reminder.getText(), reminder.getReplyDate().toString()));
+            }
+            message.setChatId(String.valueOf(chatId));
+            message.setText(text.toString());
+            return message;
         }
         message.setChatId(String.valueOf(chatId));
-        message.setText(text.toString());
-        return message;}
-        message.setChatId(String.valueOf(chatId));
         message.setText("Вы не зарегистрированы. Для регистрации отправьте /start.");
-    return message;}
+        return message;
+    }
 
     public SendMessage createMessageFull(long chatId, String text, LocalDateTime replyDate, Update update) {
         registerUser(update.getMessage());
@@ -62,25 +66,28 @@ public class TelegramService {
         message.setChatId(String.valueOf(chatId));
         message.setText(text);
 
-   return message;
+        return message;
     }
 
-    public SendMessage getActualReminder() {
-        Reminder reminder = messageService.actualMessage();
-        if (reminder == null) {
-            return null;
-        } else {
-            SendMessage message = new SendMessage();
-            message.setChatId(String.valueOf(reminder.getUser().getChatId()));
-            String text = String.format("Привет %s напоминаю  %s",reminder.getUser().getFirstName(),
-                    reminder.getText());
-            message.setText(text);
+    public List<SendMessage> getActualReminder() {
 
-            return message;
+        List<Reminder> reminders = messageService.actualMessages();
+        List<SendMessage> messages = new ArrayList<>();
+        if (reminders.size() != 0) {
+            for (Reminder reminder : reminders) {
+                SendMessage message = new SendMessage();
+                message.setChatId(String.valueOf(reminder.getUser().getChatId()));
+                String text = String.format("Привет %s напоминаю  %s", reminder.getUser().getFirstName(),
+                        reminder.getText());
+                message.setText(text);
+                messages.add(message);
+            }
+            return messages;
         }
-    }
-    public void deleteReminder(Message reminder) {
+  return null;  }
 
+    public void deleteOldReminder() {
+        messageService.deleteOldMessage();
     }
 
     private void registerUser(Message msg) {
@@ -96,7 +103,6 @@ public class TelegramService {
             userService.createUser(user);
         }
     }
-
 
 
 }

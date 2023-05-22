@@ -1,9 +1,8 @@
 package com.boris.telegramnotepad.controller;
 
 import com.boris.telegramnotepad.config.BotConfig;
-import com.boris.telegramnotepad.repository.MessageRepository;
-import com.boris.telegramnotepad.util.CalendarForm;
 import com.boris.telegramnotepad.service.TelegramService;
+import com.boris.telegramnotepad.util.CalendarForm;
 import com.boris.telegramnotepad.util.Parse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,13 +16,12 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
-    private final MessageRepository messageRepository;
-
     private static String selectedTime;
     private static String text;
     private final CalendarForm calendarForm;
@@ -62,7 +60,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     LocalDateTime localDateTime = Parse.parseTimeToInt(selectedTime, messageText);
                     SendMessage message = new SendMessage();
                     message.setChatId(String.valueOf(chatId));
-                    message.setText("You have selected time: " + localDateTime);
+                    message.setText("Вы выбрали время :" + localDateTime);
                     sendMessage(message);
                      SendMessage saveReminder =  telegramService.createMessageFull(chatId, text, localDateTime, update);
                       saveReminder.setChatId(String.valueOf(chatId));
@@ -108,18 +106,18 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void sendReminder() {
         try {
             if(telegramService.getActualReminder() != null){
-                SendMessage message = telegramService.getActualReminder();
-            execute(message);
+                List<SendMessage> sendMessageList = telegramService.getActualReminder();
+                for (SendMessage sendMessage : sendMessageList){
+                      execute(sendMessage);}
+            telegramService.deleteOldReminder();
             }
-            else {
-                log.info("No reminders");
-            }
+
         }catch (TelegramApiException e){
             e.printStackTrace();
         }
     }
-    //TODO исправить сохранине тегов в бд
-    //TODO создать поток для отправки сообщений
+
+
     //TODO добавить логирование
     //TODO добавить горячие команды
 }
