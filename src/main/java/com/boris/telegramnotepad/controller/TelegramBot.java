@@ -62,26 +62,33 @@ public class TelegramBot extends TelegramLongPollingBot {
                 return;
             }
             if (Parse.isNumeric(messageText)) {
-                String selectedTime = reminderMap.get(chatId).getReplyDatePojo().toString();//reminderMap.get(chatId).getReplyDatePojo() возвращает StringBuilder
+                String selectedTime = reminderMap.get(chatId).getReplyDatePojo().toString();
                 LocalDateTime localDateTime = Parse.parseTimeToInt(selectedTime, messageText);
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm");
-                String formattedDateTime = localDateTime.format(formatter);
-                SendMessage timeSelectedMessage = new SendMessage();
-                timeSelectedMessage.setChatId(String.valueOf(chatId));
-                timeSelectedMessage.setText("Вы выбрали время :" + formattedDateTime);
-                StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append(localDateTime);
-                String text = reminderMap.get(chatId).getTextPojo();
-                ReminderPojo reminderPojofinal = new ReminderPojo(text, stringBuilder);
-                reminderMap.put(chatId, reminderPojofinal);
+                if (LocalDateTime.now().isBefore(localDateTime)) {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy-MM-dd HH:mm");
+                    String formattedDateTime = localDateTime.format(formatter);
+                    SendMessage timeSelectedMessage = new SendMessage();
+                    timeSelectedMessage.setChatId(String.valueOf(chatId));
+                    timeSelectedMessage.setText("Вы выбрали время :" + formattedDateTime);
+                    StringBuilder stringBuilder = new StringBuilder();
+                    stringBuilder.append(localDateTime);
+                    String text = reminderMap.get(chatId).getTextPojo();
+                    ReminderPojo reminderPojofinal = new ReminderPojo(text, stringBuilder);
+                    reminderMap.put(chatId, reminderPojofinal);
 
-                sendMessage(timeSelectedMessage);
-                SendMessage saveReminder = telegramService.createMessageFull(chatId,
-                        reminderMap.get(chatId).getTextPojo(),
-                        localDateTime, update);
-                saveReminder.setChatId(String.valueOf(chatId));
-                sendMessage(saveReminder);
-                return;
+                    sendMessage(timeSelectedMessage);
+                    SendMessage saveReminder = telegramService.createMessageFull(chatId,
+                            reminderMap.get(chatId).getTextPojo(),
+                            localDateTime, update);
+                    saveReminder.setChatId(String.valueOf(chatId));
+                    sendMessage(saveReminder);
+                    return;
+                } else {
+                    SendMessage exceptionMessage = new SendMessage();
+                    exceptionMessage.setChatId(String.valueOf(chatId));
+                    exceptionMessage.setText("Нельзя выбрать время которое прошло, выберите другое время");
+                    sendMessage(exceptionMessage);
+                }
             } else {
                 ReminderPojo reminderPojo = reminderMap.getOrDefault(chatId, new ReminderPojo());
                 reminderPojo.setTextPojo(messageText);
@@ -97,22 +104,35 @@ public class TelegramBot extends TelegramLongPollingBot {
             String data = callbackQuery.getData();
             if (data.startsWith("CALENDAR_MONTH_")) {
                 String previousMonth = data.substring("CALENDAR_MONTH_".length());
-                SendMessage message = calendarForm.sendDay(Integer.parseInt(previousMonth));
-                message.setChatId(String.valueOf(callbackQuery.getMessage().getChatId()));
-                sendMessage(message);
+                if (actualDate(Integer.parseInt(previousMonth))) {
+                    SendMessage message = calendarForm.sendDay(Integer.parseInt(previousMonth));
+                    message.setChatId(String.valueOf(callbackQuery.getMessage().getChatId()));
+                    sendMessage(message);
+                } else {
+                    SendMessage exceptionMessage = new SendMessage();
+                    exceptionMessage.setChatId(String.valueOf(callbackQuery.getMessage().getChatId()));
+                    exceptionMessage.setText("Нельзя выбрать дату  которая прошла, выберите другую дату");
+                    sendMessage(exceptionMessage);
+                }
             }
             if (data.startsWith("CALENDAR_DAY_")) {
                 String day = data.substring("CALENDAR_DAY_".length());
                 StringBuilder stringBuilder = new StringBuilder();
                 stringBuilder.append(day);
                 LocalDate localDate = Parse.parseDateToInt(day);
-                SendMessage message = calendarForm.sendTime(localDate);
-                message.setChatId(String.valueOf(callbackQuery.getMessage().getChatId()));
-                sendMessage(message);
-                ReminderPojo reminderPojo = reminderMap.get(callbackQuery.getMessage().getChatId());
-                reminderPojo.setReplyDatePojo(stringBuilder);
-                reminderMap.put(callbackQuery.getMessage().getChatId(), reminderPojo);
-
+                if (LocalDate.now().isBefore(localDate) || LocalDate.now().isEqual(localDate)) {
+                    SendMessage message = calendarForm.sendTime(localDate);
+                    message.setChatId(String.valueOf(callbackQuery.getMessage().getChatId()));
+                    sendMessage(message);
+                    ReminderPojo reminderPojo = reminderMap.get(callbackQuery.getMessage().getChatId());
+                    reminderPojo.setReplyDatePojo(stringBuilder);
+                    reminderMap.put(callbackQuery.getMessage().getChatId(), reminderPojo);
+                } else {
+                    SendMessage exceptionMessage = new SendMessage();
+                    exceptionMessage.setChatId(String.valueOf(callbackQuery.getMessage().getChatId()));
+                    exceptionMessage.setText("Нельзя выбрать дату  которая прошла, выберите другую дату");
+                    sendMessage(exceptionMessage);
+                }
             }
         }
     }
@@ -141,6 +161,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    private boolean actualDate(int month) {
+        LocalDate localDate = LocalDate.now();
+        int a = localDate.getMonthValue();
+        return month >= a;
+    }
 
     //TODO добавить логирование
     //TODO добавить горячие команды
